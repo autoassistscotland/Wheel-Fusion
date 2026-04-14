@@ -1,0 +1,71 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Fields: email (string), role (string: user|admin), createdAt (timestamp)
+    //
+    // Collection: claims
+    // Fields: userId (string), type (string), status (string), details (string), location (string), createdAt (timestamp)
+    //
+    // Collection: kb
+    // Fields: category (string), title (string), content (string), summary (string), lastUpdated (timestamp)
+    //
+    // ===============================================================
+
+    // Helper Functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && 
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+         (request.auth.token.email == "autoassistscotland@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['email', 'role', 'createdAt']) &&
+             data.email is string &&
+             data.role in ['user', 'admin'] &&
+             data.createdAt is timestamp;
+    }
+
+    function isValidClaim(data) {
+      return data.keys().hasAll(['userId', 'type', 'status', 'details', 'location', 'createdAt']) &&
+             data.userId == request.auth.uid &&
+             data.type in ['accident', 'overcharge', 'misconduct', 'cancellation'] &&
+             data.status in ['pending', 'reviewing', 'approved', 'rejected'] &&
+             data.details is string && data.details.size() < 5000 &&
+             data.location is string;
+    }
+
+    // Rules
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isAuthenticated() && isValidUser(request.resource.data) && 
+                    ((isOwner(userId) && request.resource.data.role == 'user') || isAdmin());
+      allow update: if isAuthenticated() && isValidUser(request.resource.data) && 
+                    ((isOwner(userId) && request.resource.data.role == resource.data.role) || isAdmin());
+    }
+
+    match /claims/{claimId} {
+      allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isAuthenticated() && isValidClaim(request.resource.data);
+      allow update: if isAdmin(); // Only admins can update claim status
+      allow delete: if isAdmin();
+    }
+
+    match /kb/{articleId} {
+      allow read: if true; // Knowledge base is public
+      allow write: if isAdmin();
+    }
+  }
+}

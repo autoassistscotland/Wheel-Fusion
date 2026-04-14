@@ -1,0 +1,60 @@
+{
+  "entities": {
+    "Claim": {
+      "title": "Claim",
+      "description": "A claim submitted by a taxi driver or passenger.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "The UID of the user who submitted the claim." },
+        "type": { "type": "string", "enum": ["accident", "overcharge", "misconduct", "cancellation"], "description": "The type of claim." },
+        "status": { "type": "string", "enum": ["pending", "reviewing", "approved", "rejected"], "description": "Current status of the claim." },
+        "details": { "type": "string", "description": "Detailed description of the incident." },
+        "location": { "type": "string", "description": "City where the incident occurred (e.g., Glasgow, Edinburgh)." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Timestamp when the claim was created." },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Timestamp when the claim was last updated." }
+      },
+      "required": ["userId", "type", "status", "details", "location", "createdAt"]
+    },
+    "KnowledgeBaseArticle": {
+      "title": "Knowledge Base Article",
+      "description": "An article in the help center.",
+      "type": "object",
+      "properties": {
+        "category": { "type": "string", "description": "Category of the article (e.g., Accident, Regulation)." },
+        "title": { "type": "string", "description": "Title of the article." },
+        "keywords": { "type": "array", "items": { "type": "string" }, "description": "Keywords for search." },
+        "content": { "type": "string", "description": "Full content of the article." },
+        "summary": { "type": "string", "description": "Brief summary of the article." },
+        "lastUpdated": { "type": "string", "format": "date-time", "description": "Last update timestamp." },
+        "priority": { "type": "integer", "description": "Priority for display." }
+      },
+      "required": ["category", "title", "content", "lastUpdated"]
+    },
+    "User": {
+      "title": "User",
+      "description": "User profile information.",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string", "format": "email" },
+        "displayName": { "type": "string" },
+        "role": { "type": "string", "enum": ["user", "admin"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["email", "role"]
+    }
+  },
+  "firestore": {
+    "/claims/{claimId}": {
+      "schema": "Claim",
+      "description": "Collection of claims."
+    },
+    "/kb/{articleId}": {
+      "schema": "KnowledgeBaseArticle",
+      "description": "Collection of knowledge base articles."
+    },
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profiles."
+    }
+  }
+}
